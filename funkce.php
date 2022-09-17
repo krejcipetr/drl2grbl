@@ -14,8 +14,9 @@ $GLOBALS['tools'] = array(
 
 define('ZUP', 1);
 define('ZDOWN', - 1.6);
-define('FREZASTEP', 0.3);
+define('FREZASTEP', 0.5);
 define('FREZADRILL', FALSE);
+define('WORKINGSPEED', 20);
 
 if (! defined("YINVERZE")) {
     define('YINVERZE', 1);
@@ -69,6 +70,12 @@ function command($a_command, $a_position, $a_speed = '')
     if (preg_match("/J([-0-9.]+)/", $a_position, $l_parts)) {
         $l_j = (floatval($l_parts[1]) * $GLOBALS['ratio']);
     }
+    if (preg_match("/R([-0-9.]+)/", $a_position, $l_parts)) {
+        $l_r = (floatval($l_parts[1]) * $GLOBALS['ratio']);
+    }
+    if (preg_match("/K([-0-9.]+)/", $a_position, $l_parts)) {
+        $l_k = (floatval($l_parts[1]) * $GLOBALS['ratio']);
+    }
 
     // Je konrektce otoceni?
     if (isset($l_x) && isset($l_y)) {
@@ -87,6 +94,12 @@ function command($a_command, $a_position, $a_speed = '')
     }
     if (isset($l_j)) {
         $l_position .= sprintf("J%01.2f", $l_j);
+    }
+    if (isset($l_r)) {
+        $l_position .= sprintf("R%01.2f", $l_j);
+    }
+    if (isset($l_k)) {
+        $l_position .= sprintf("K%01.2f", $l_j);
     }
     if (isset($l_z)) {
         if (is_numeric($l_z)) {
@@ -121,7 +134,7 @@ function correctionSet($a_def)
         $l_distance2 = sqrt($l_x1 * $l_x1 + $l_y1 * $l_y1);
 
         if (abs($l_distance1 - $l_distance2) > 0.2) {
-            die(sprintf("Rotation correction is overlimit (%f vs %f)", $l_distance1, $l_distance2));
+            die(sprintf("Rotation correction over limit 0.2 (%f vs %f = %f)", $l_distance1, $l_distance2, abs($l_distance1 - $l_distance2)));
         }
 
         $GLOBALS['rotation'] = atan(floatval($l_y1) / floatval($l_x1));
@@ -133,9 +146,13 @@ function correctionSet($a_def)
 
 function save($a_source)
 {
+    $l_filename = $a_source;
+    $l_parts = pathinfo($l_filename);
+    
+    
+    $l_totalcommands = array();
+    
     foreach ($GLOBALS['tools'] as $l_number => $l_commands) {
-        $l_filename = $a_source;
-        $l_parts = pathinfo($l_filename);
         $l_newfile = $l_parts['dirname'] . DIRECTORY_SEPARATOR . $l_parts['filename'] . "-T" . $l_number . "-" . $l_commands['description'];
         unset($l_commands['description']);
 
@@ -159,11 +176,14 @@ function save($a_source)
         } else {
             $l_comm = $l_commands;
         }
+        
+        $l_totalcommands = array_merge($l_comm);
 
         array_unshift($l_comm, SPINON);
         array_unshift($l_comm, "F20");
         array_unshift($l_comm, "G00Z" . ZUP);
         array_unshift($l_comm, "G90");
+        array_unshift($l_comm, "G21");
         array_push($l_comm, "G00Z" . ZUP);
         array_push($l_comm, SPINOFF);
         array_push($l_comm, "G00X0Y0");
@@ -171,4 +191,17 @@ function save($a_source)
 
         file_put_contents($l_filename, implode(PHP_EOL, $l_comm));
     }
+    
+    array_unshift($l_totalcommands, SPINON);
+    array_unshift($l_totalcommands, "F".WORKINGSPEED);
+    array_unshift($l_totalcommands, "G00Z" . ZUP);
+    array_unshift($l_totalcommands, "G90");
+    array_unshift($l_totalcommands, "G21");
+    array_push($l_totalcommands, "G00Z" . ZUP);
+    array_push($l_totalcommands, SPINOFF);
+    array_push($l_totalcommands, "G00X0Y0");
+    array_push($l_totalcommands, "G53G00Z0");
+    
+    $l_newfile = $l_parts['dirname'] . DIRECTORY_SEPARATOR . $l_parts['filename'] . "-predrill.nc";
+    file_put_contents($l_filename, implode(PHP_EOL, $l_totalcommands));
 }
