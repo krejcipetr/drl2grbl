@@ -148,20 +148,21 @@ function save($a_source)
 {
     $l_filename = $a_source;
     $l_parts = pathinfo($l_filename);
-    
-    
+
     $l_totalcommands = array();
-    
+
+    $l_celkempocet = 0;
+
     foreach ($GLOBALS['tools'] as $l_number => $l_commands) {
-        $l_newfile = $l_parts['dirname'] . DIRECTORY_SEPARATOR . $l_parts['filename'] . "-T" . $l_number . "-" . $l_commands['description'];
+        $l_newfile = $l_parts['dirname'] . DIRECTORY_SEPARATOR . $l_parts['filename'] . "-T" . $l_number . "-" . $l_commands['description'] . ".nc";
         unset($l_commands['description']);
 
         if (count($l_commands) == 0) {
             continue;
         }
 
-        $l_filename = $l_newfile . ".nc";
-        echo $l_filename . PHP_EOL;
+        $l_celkempocet ++;
+        echo $l_newfile . PHP_EOL;
 
         if (ZTEMPLATE) {
             $l_comm = array();
@@ -176,7 +177,7 @@ function save($a_source)
         } else {
             $l_comm = $l_commands;
         }
-        
+
         $l_totalcommands = array_merge($l_comm);
 
         array_unshift($l_comm, SPINON);
@@ -189,19 +190,23 @@ function save($a_source)
         array_push($l_comm, "G00X0Y0");
         array_push($l_comm, "G53G00Z0");
 
-        file_put_contents($l_filename, implode(PHP_EOL, $l_comm));
+        file_put_contents($l_newfile, implode(PHP_EOL, $l_comm));
     }
-    
-    array_unshift($l_totalcommands, SPINON);
-    array_unshift($l_totalcommands, "F".WORKINGSPEED);
-    array_unshift($l_totalcommands, "G00Z" . ZUP);
-    array_unshift($l_totalcommands, "G90");
-    array_unshift($l_totalcommands, "G21");
-    array_push($l_totalcommands, "G00Z" . ZUP);
-    array_push($l_totalcommands, SPINOFF);
-    array_push($l_totalcommands, "G00X0Y0");
-    array_push($l_totalcommands, "G53G00Z0");
-    
-    $l_newfile = $l_parts['dirname'] . DIRECTORY_SEPARATOR . $l_parts['filename'] . "-predrill.nc";
-    file_put_contents($l_filename, implode(PHP_EOL, $l_totalcommands));
+
+    if ($l_celkempocet > 1) {
+
+        array_unshift($l_totalcommands, SPINON);
+        array_unshift($l_totalcommands, "F" . WORKINGSPEED);
+        array_unshift($l_totalcommands, "G00Z" . ZUP);
+        array_unshift($l_totalcommands, "G90");
+        array_unshift($l_totalcommands, "G21");
+        array_push($l_totalcommands, "G00Z" . ZUP);
+        array_push($l_totalcommands, SPINOFF);
+        array_push($l_totalcommands, "G00X0Y0");
+        array_push($l_totalcommands, "G53G00Z0");
+
+        $l_newfile = $l_parts['dirname'] . DIRECTORY_SEPARATOR . $l_parts['filename'] . "-complete.nc";
+        echo $l_newfile . PHP_EOL;
+        file_put_contents($l_newfile, implode(PHP_EOL, $l_totalcommands));
+    }
 }
