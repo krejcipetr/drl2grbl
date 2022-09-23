@@ -178,7 +178,7 @@ function save($a_source)
             $l_comm = $l_commands;
         }
 
-        $l_totalcommands = array_merge($l_comm);
+        $l_totalcommands = array_merge($l_totalcommands, $l_comm);
 
         array_unshift($l_comm, SPINON);
         array_unshift($l_comm, "F20");
@@ -194,7 +194,6 @@ function save($a_source)
     }
 
     if ($l_celkempocet > 1) {
-
         array_unshift($l_totalcommands, SPINON);
         array_unshift($l_totalcommands, "F" . WORKINGSPEED);
         array_unshift($l_totalcommands, "G00Z" . ZUP);
